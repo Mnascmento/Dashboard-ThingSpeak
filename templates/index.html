@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard ThingSpeak</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #e0f2ff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h2 {
+            margin-top: 40px;
+            color: #004080;
+        }
+
+        /* Caixa central tipo login */
+        .form-box {
+            background-color: #ffffff;
+            padding: 30px 40px;
+            margin-top: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            width: 320px;
+            text-align: center;
+        }
+
+        .form-box input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        .form-box button {
+            width: 100%;
+            padding: 12px;
+            background-color: #004080;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .form-box button:hover {
+            background-color: #0066cc;
+        }
+
+        /* Área de gráficos */
+        #charts {
+            width: 90%;
+            max-width: 1000px;
+            margin: 40px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        .chart-container {
+            background-color: #004080;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            color: white;
+        }
+
+        .chart-container h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <h2>Dashboard Sensor de Temperatura</h2>
+
+    <div class="form-box">
+        <form id="config-form">
+            <input type="text" id="channel_id" placeholder="Digite o Channel ID" required>
+            <input type="password" id="api_key" placeholder="Digite a API Key">
+            <button type="submit">Carregar Dados</button>
+        </form>
+    </div>
+
+    <div id="charts"></div>
+
+    <script>
+        let charts = {};
+        let refreshInterval;
+
+        async function fetchData() {
+            const channelId = document.getElementById("channel_id").value.trim();
+            const apiKey = document.getElementById("api_key").value.trim();
+
+            if (!channelId) return;
+
+            try {
+                const response = await fetch("/get_data", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({channel_id: channelId, api_key: apiKey, results: 20})
+                });
+
+                const data = await response.json();
+                console.log("Resposta recebida:", data);
+
+                if (data.error) {
+                    alert("Erro: " + data.error);
+                    return;
+                }
+
+                const chartsDiv = document.getElementById("charts");
+
+                // Se ainda não existem gráficos, cria eles
+                if (Object.keys(charts).length === 0) {
+                    chartsDiv.innerHTML = "";
+                    Object.keys(data.values).forEach((fieldName, index) => {
+                        const container = document.createElement("div");
+                        container.className = "chart-container";
+
+                        const title = document.createElement("h3");
+                        title.textContent = fieldName;
+                        container.appendChild(title);
+
+                        const canvas = document.createElement("canvas");
+                        canvas.id = "chart" + index;
+                        container.appendChild(canvas);
+
+                        chartsDiv.appendChild(container);
+
+                        charts[fieldName] = new Chart(canvas, {
+                            type: "line",
+                            data: {
+                                labels: data.labels,
+                                datasets: [{
+                                    label: fieldName,
+                                    data: data.values[fieldName],
+                                    borderColor: "yellow",
+                                    backgroundColor: "rgba(255, 255, 0, 0.2)",
+                                    fill: true,
+                                    tension: 0.3
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                scales: {
+                                    x: { 
+                                        display: true, 
+                                        title: { display: true, text: "Tempo", color: "#ffffff" },
+                                        ticks: { color: "#ffffff" }
+                                    },
+                                    y: { 
+                                        display: true, 
+                                        title: { display: true, text: "Valor", color: "#ffffff" },
+                                        ticks: { color: "#ffffff" }
+                                    }
+                                },
+                                plugins: {
+                                    legend: { labels: { color: "#ffffff" } }
+                                }
+                            }
+                        });
+                    });
+                } else {
+                    // Atualiza dados existentes
+                    Object.keys(data.values).forEach((fieldName) => {
+                        const chart = charts[fieldName];
+                        if (chart) {
+                            chart.data.labels = data.labels;
+                            chart.data.datasets[0].data = data.values[fieldName];
+                            chart.update();
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error("Erro ao buscar dados:", err);
+                alert("Erro ao buscar dados. Veja o console para detalhes.");
+            }
+        }
+
+        document.getElementById("config-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            await fetchData();
+
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(fetchData, 30000); // atualiza a cada 30s
+        });
+    </script>
+</body>
+</html>

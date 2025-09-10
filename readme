@@ -1,0 +1,40 @@
+# Dashboard ThingSpeak
+
+Este projeto é um **dashboard web** para visualizar dados de canais do ThingSpeak em tempo real.  
+Ele permite inserir o **Channel ID** e a **API Key** (caso o canal seja privado) e exibe gráficos de todos os campos (`fields`) do canal, atualizando automaticamente a cada 30 segundos.
+
+---
+
+## Instalação
+
+1. Abra o terminal e navegue até a pasta do projeto:
+
+cd C:\Users\Aluno\Pictures\Dashboard-ThingSpeak
+
+2. Crie um ambiente virtual:
+
+python -m venv venv
+venv\Scripts\activate
+
+3. Instale o flask
+
+pip install flask requests
+
+4. Execute 
+
+python app.py
+
+5. O projeto estará acessível em: http://127.0.0.1:5000
+
+
+## Tecnologias utilizadas
+
+Python 3.x
+
+Flask
+
+Requests
+
+HTML/CSS/JavaScript
+
+Chart.js
